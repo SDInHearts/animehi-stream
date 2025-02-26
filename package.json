@@ -3,6 +3,7 @@
   "version": "1.2.0",
   "private": true,
   "scripts": {
+    "setup": "cp .env.example .env.local && pnpm install && npx prisma migrate dev",
     "dev": "next dev",
     "build": "next build",
     "start": "node .next/standalone/server.js",
