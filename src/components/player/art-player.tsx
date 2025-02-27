@@ -1,53 +1,55 @@
 "use client"
 
-import React, { useEffect, useMemo, useRef, useState } from "react"
-
-import { type Player } from "artplayer/types/player"
+import React, { useEffect, useState } from "react"
 import type Artplayer from "artplayer/types/artplayer"
 import { VideoPlayer } from "./artplayer/art-player"
-import Option from "artplayer/types/option"
-
 import type { Source, SourcesResponse } from "types/types"
+import { notFound } from "next/navigation"
 
 type WatchProps = {
   sourcesPromise: Promise<SourcesResponse | undefined>
 }
 
-import { notFound } from "next/navigation"
-
 const ArtPlayerComponent = ({ sourcesPromise }: WatchProps) => {
   const [url, setUrl] = useState("")
   const [sources, setSources] = useState<Source[] | undefined>(undefined)
 
-  function getSelectedSrc(selectedQuality?: string): string {
-    const selectedSrc = sources?.find(
-      (src) => src.quality === selectedQuality
-    ) as Source
-    if (!selectedSrc) return ""
+  useEffect(() => {
+    let isMounted = true
 
-    return selectedSrc.url
+    const fetchSources = async () => {
+      try {
+        const res = await sourcesPromise
+        if (!res || !isMounted) return notFound()
+
+        setSources(res.sources)
+
+        // Select the default quality source
+        const defaultSource = res.sources.find((src) => src.quality === "default")
+        if (defaultSource) setUrl(defaultSource.url)
+      } catch (error) {
+        console.error("Failed to fetch sources:", error)
+      }
+    }
+
+    fetchSources()
+
+    return () => {
+      isMounted = false
+    }
+  }, [sourcesPromise])
+
+  function getSelectedSrc(selectedQuality?: string): string {
+    const selectedSrc = sources?.find((src) => src.quality === selectedQuality)
+    return selectedSrc ? selectedSrc.url : ""
   }
 
-  useEffect(() => {
-    if (!sourcesPromise) return
-
-    sourcesPromise.then((res) => (res ? setSources(res.sources) : notFound()))
-
-    const selectedSrc = sources?.find(
-      (src) => src.quality === "default"
-    ) as Source
-    if (!selectedSrc) return
-
-    setUrl(selectedSrc.url)
-  }, [sources])
-
   const option = {
-    url: url,
+    url,
     autoplay: true,
     autoSize: false,
     fullscreen: true,
     autoOrientation: true,
-    //  icons: icons,
     setting: true,
     screenshot: true,
     hotkey: true,
@@ -58,7 +60,7 @@ const ArtPlayerComponent = ({ sourcesPromise }: WatchProps) => {
 
   function getInstance(art: Artplayer) {
     art.on("video:ended", () => {
-      console.log("Ended")
+      console.log("Video ended")
     })
   }
 
